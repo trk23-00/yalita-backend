@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model api_migrations {
+  nombre String   @id
+  fecha  DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model chats {
+  id          BigInt   @id @default(autoincrement())
+  match_id    BigInt
+  mensaje     String
+  enviado_por BigInt
+  fecha_envio DateTime @default(now()) @db.Timestamptz(6)
+  usuarios    usuarios @relation(fields: [enviado_por], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  matches     matches  @relation(fields: [match_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([enviado_por])
+  @@index([match_id, fecha_envio])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model interacciones {
+  id                                               BigInt   @id @default(autoincrement())
+  usuario_id                                       BigInt
+  interactuado_id                                  BigInt
+  tipo_interaccion                                 String
+  usuarios_interacciones_interactuado_idTousuarios usuarios @relation("interacciones_interactuado_idTousuarios", fields: [interactuado_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios_interacciones_usuario_idTousuarios      usuarios @relation("interacciones_usuario_idTousuarios", fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([interactuado_id])
+  @@index([usuario_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model matches {
+  id                                     BigInt   @id @default(autoincrement())
+  usuario1_id                            BigInt
+  usuario2_id                            BigInt
+  fecha_match                            DateTime @default(now()) @db.Timestamptz(6)
+  chats                                  chats[]
+  usuarios_matches_usuario1_idTousuarios usuarios @relation("matches_usuario1_idTousuarios", fields: [usuario1_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios_matches_usuario2_idTousuarios usuarios @relation("matches_usuario2_idTousuarios", fields: [usuario2_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([usuario1_id])
+  @@index([usuario2_id])
+}
+
+model mensajesanonimos {
+  id                                                  BigInt   @id @default(autoincrement())
+  remitente_id                                        BigInt
+  destinatario_id                                     BigInt
+  mensaje                                             String
+  revelado                                            Boolean  @default(false)
+  usuarios_mensajesanonimos_destinatario_idTousuarios usuarios @relation("mensajesanonimos_destinatario_idTousuarios", fields: [destinatario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios_mensajesanonimos_remitente_idTousuarios    usuarios @relation("mensajesanonimos_remitente_idTousuarios", fields: [remitente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([destinatario_id])
+  @@index([remitente_id])
+}
+
+model notificaciones {
+  id                 BigInt   @id @default(autoincrement())
+  usuario_id         BigInt
+  tipo_notificacion  String?
+  contenido          String?
+  fecha_notificacion DateTime @default(now()) @db.Timestamptz(6)
+  leida              Boolean  @default(false)
+  usuarios           usuarios @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([usuario_id, fecha_notificacion])
+}
+
+model perfiles {
+  id           BigInt   @id @default(autoincrement())
+  usuario_id   BigInt   @unique(map: "perfiles_usuario_unico")
+  informacion  String?
+  intereses    String[] @default([])
+  gustos       String[] @default([])
+  preferencias String[] @default([])
+  usuarios     usuarios @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([usuario_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model recomendaciones {
+  id                                                BigInt   @id @default(autoincrement())
+  usuario_id                                        BigInt
+  recomendado_id                                    BigInt
+  compatibilidad                                    Float?   @db.Real
+  usuarios_recomendaciones_recomendado_idTousuarios usuarios @relation("recomendaciones_recomendado_idTousuarios", fields: [recomendado_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios_recomendaciones_usuario_idTousuarios     usuarios @relation("recomendaciones_usuario_idTousuarios", fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([usuario_id, recomendado_id])
+  @@index([recomendado_id])
+  @@index([usuario_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reportes {
+  id                                        BigInt   @id @default(autoincrement())
+  reportado_id                              BigInt
+  reportado_por                             BigInt
+  razon                                     String?
+  fecha_reporte                             DateTime @default(now()) @db.Timestamptz(6)
+  estado                                    String   @default("pendiente")
+  usuarios_reportes_reportado_idTousuarios  usuarios @relation("reportes_reportado_idTousuarios", fields: [reportado_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios_reportes_reportado_porTousuarios usuarios @relation("reportes_reportado_porTousuarios", fields: [reportado_por], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([reportado_id])
+  @@index([reportado_por])
+}
+
+model sesiones {
+  id         String   @id @db.Uuid
+  usuario_id BigInt
+  expira_en  DateTime @db.Timestamptz(6)
+  revocada   Boolean  @default(false)
+  usuarios   usuarios @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([usuario_id], map: "sesiones_usuario_idx")
+}
+
+model usuarios {
+  id                                                          BigInt             @id @default(autoincrement())
+  nombre                                                      String
+  email                                                       String             @unique
+  password_hash                                               String
+  foto_credencial                                             String?
+  foto_carnet                                                 String?
+  verificado                                                  Boolean            @default(false)
+  tipo_usuario                                                String?
+  chats                                                       chats[]
+  interacciones_interacciones_interactuado_idTousuarios       interacciones[]    @relation("interacciones_interactuado_idTousuarios")
+  interacciones_interacciones_usuario_idTousuarios            interacciones[]    @relation("interacciones_usuario_idTousuarios")
+  matches_matches_usuario1_idTousuarios                       matches[]          @relation("matches_usuario1_idTousuarios")
+  matches_matches_usuario2_idTousuarios                       matches[]          @relation("matches_usuario2_idTousuarios")
+  mensajesanonimos_mensajesanonimos_destinatario_idTousuarios mensajesanonimos[] @relation("mensajesanonimos_destinatario_idTousuarios")
+  mensajesanonimos_mensajesanonimos_remitente_idTousuarios    mensajesanonimos[] @relation("mensajesanonimos_remitente_idTousuarios")
+  notificaciones                                              notificaciones[]
+  perfiles                                                    perfiles?
+  recomendaciones_recomendaciones_recomendado_idTousuarios    recomendaciones[]  @relation("recomendaciones_recomendado_idTousuarios")
+  recomendaciones_recomendaciones_usuario_idTousuarios        recomendaciones[]  @relation("recomendaciones_usuario_idTousuarios")
+  reportes_reportes_reportado_idTousuarios                    reportes[]         @relation("reportes_reportado_idTousuarios")
+  reportes_reportes_reportado_porTousuarios                   reportes[]         @relation("reportes_reportado_porTousuarios")
+  sesiones                                                    sesiones[]
+}
